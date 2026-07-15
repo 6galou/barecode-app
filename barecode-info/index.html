@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Barecode Info - Complément Laserdiscs</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #f5f5f5; padding: 20px; }
+        .container { max-width: 900px; margin: 0 auto; }
+        h1 { color: #333; margin-bottom: 20px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; color: #555; font-weight: bold; font-size: 12px; }
+        input, select, textarea { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; }
+        button { background: #4CAF50; color: white; padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; margin-right: 10px; margin-top: 10px; }
+        button:hover { background: #45a049; }
+        button.secondary { background: #2196F3; }
+        button.secondary:hover { background: #0b7dda; }
+        .item { background: #f9f9f9; padding: 12px; margin-bottom: 10px; border-left: 4px solid #4CAF50; border-radius: 4px; }
+        .item-code { font-weight: bold; color: #333; }
+        .message { padding: 10px; margin-bottom: 15px; border-radius: 4px; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>💿 Barecode Info - Complément Laserdiscs</h1>
+        
+        <div class="grid">
+            <!-- Colonne 1: En attente de traitement -->
+            <div class="card">
+                <h2>📦 À compléter</h2>
+                <div id="message"></div>
+                <div id="pendingList"></div>
+            </div>
+            
+            <!-- Colonne 2: Formulaire de saisie -->
+            <div class="card">
+                <h2>✏️ Détails Laserdisc</h2>
+                <form id="laserForm">
+                    <input type="hidden" id="ean">
+                    
+                    <div class="form-group">
+                        <label>EAN</label>
+                        <input type="text" id="eanDisplay" readonly>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Titre *</label>
+                        <input type="text" id="titre" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Auteur/Réalisateur</label>
+                        <input type="text" id="auteur">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Année</label>
+                        <input type="number" id="annee">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Résolution</label>
+                        <select id="resolution">
+                            <option value="">-- Sélectionner --</option>
+                            <option value="480i">480i</option>
+                            <option value="720p">720p</option>
+                            <option value="1080i">1080i</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Son</label>
+                        <select id="son">
+                            <option value="">-- Sélectionner --</option>
+                            <option value="Mono">Mono</option>
+                            <option value="Stéréo">Stéréo</option>
+                            <option value="Dolby">Dolby</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Édition</label>
+                        <input type="text" id="edition" placeholder="Criterion, Arrow...">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>État</label>
+                        <select id="etat">
+                            <option value="">-- Sélectionner --</option>
+                            <option value="Neuf">Neuf</option>
+                            <option value="Bon">Bon</option>
+                            <option value="Usé">Usé</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Notes personnelles</label>
+                        <textarea id="notes" rows="2"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Champ Libre 1</label>
+                        <input type="text" id="ext1">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Champ Libre 2</label>
+                        <input type="text" id="ext2">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Champ Libre 3</label>
+                        <input type="text" id="ext3">
+                    </div>
+                    
+                    <button type="submit">💾 Sauvegarder</button>
+                    <button type="button" class="secondary" onclick="resetForm()">🔄 Réinitialiser</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('laserForm');
+        const messageDiv = document.getElementById('message');
+        
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const formData = new FormData(form);
+            formData.append('action', 'save');
+            
+            fetch('api.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    showMessage('✅ Laserdisc enregistré!', 'success');
+                    resetForm();
+                    loadPending();
+                } else {
+                    showMessage('❌ ' + data.error, 'error');
+                }
+            })
+            .catch(error => showMessage('Erreur: ' + error, 'error'));
+        });
+        
+        function showMessage(text, type) {
+            messageDiv.className = 'message ' + type;
+            messageDiv.textContent = text;
+            setTimeout(() => messageDiv.textContent = '', 3000);
+        }
+        
+        function loadPending() {
+            fetch('api.php?action=getPending')
+            .then(r => r.json())
+            .then(data => {
+                const list = document.getElementById('pendingList');
+                list.innerHTML = '';
+                if (data.length === 0) {
+                    list.innerHTML = '<div class="info">✅ Tous les codes-barres sont traités!</div>';
+                    return;
+                }
+                data.forEach(item => {
+                    const div = document.createElement('div');
+                    div.className = 'item';
+                    div.innerHTML = `
+                        <div class="item-code">${item.ean}</div>
+                        <button type="button" class="secondary" onclick="selectItem('${item.ean}')">Traiter →</button>
+                    `;
+                    list.appendChild(div);
+                });
+            });
+        }
+        
+        function selectItem(ean) {
+            document.getElementById('ean').value = ean;
+            document.getElementById('eanDisplay').value = ean;
+            document.getElementById('titre').focus();
+        }
+        
+        function resetForm() {
+            form.reset();
+            document.getElementById('eanDisplay').value = '';
+        }
+        
+        loadPending();
+    </script>
+</body>
+</html>
