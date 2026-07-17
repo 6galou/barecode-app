@@ -16,14 +16,17 @@
         input, select, textarea { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; }
         button { background: #4CAF50; color: white; padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; margin-right: 10px; margin-top: 10px; }
         button:hover { background: #45a049; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
         button.secondary { background: #2196F3; }
         button.secondary:hover { background: #0b7dda; }
+        button.secondary:disabled { background: #ccc; }
         .item { background: #f9f9f9; padding: 12px; margin-bottom: 10px; border-left: 4px solid #4CAF50; border-radius: 4px; }
         .item-code { font-weight: bold; color: #333; }
         .message { padding: 10px; margin-bottom: 15px; border-radius: 4px; }
         .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
         .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
         .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .loading { background: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
     </style>
 </head>
 <body>
@@ -36,6 +39,7 @@
                 <h2>📦 À compléter</h2>
                 <div id="message"></div>
                 <div id="pendingList"></div>
+                <button id="btn-import-barcodes" type="button">📥 Importer codes-barres</button>
             </div>
             
             <!-- Colonne 2: Formulaire de saisie -->
@@ -121,6 +125,7 @@
                     
                     <button type="submit">💾 Sauvegarder</button>
                     <button type="button" class="secondary" onclick="resetForm()">🔄 Réinitialiser</button>
+                    <button id="btn-search-ean" type="button" class="secondary" disabled>🔍 Chercher infos EAN</button>
                 </form>
             </div>
         </div>
@@ -152,10 +157,90 @@
             .catch(error => showMessage('Erreur: ' + error, 'error'));
         });
         
+        // Bouton Importer codes-barres depuis la table barcodes
+        document.getElementById('btn-import-barcodes').addEventListener('click', function () {
+            if (!confirm('Importer les codes‑barres depuis la table barcodes dans laserdiscs.ean ?')) return;
+
+            var btn = this;
+            btn.disabled = true;
+            var originalText = btn.textContent;
+            btn.textContent = 'Import en cours…';
+
+            fetch('api.php', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+                body: new URLSearchParams({ action: 'import_barcodes' })
+            })
+                .then(function(res) {
+                    if (!res.ok) throw new Error('HTTP ' + res.status);
+                    return res.json();
+                })
+                .then(function(json) {
+                    if (json.status === 'ok') {
+                        showMessage('✅ Import terminé — ' + json.inserted + ' code(s) ajouté(s)', 'success');
+                        loadPending();
+                    } else if (json.error) {
+                        showMessage('❌ Erreur: ' + json.error, 'error');
+                    } else {
+                        showMessage('⚠️ Réponse inattendue', 'error');
+                    }
+                })
+                .catch(function(err) {
+                    showMessage('❌ Échec: ' + err.message, 'error');
+                })
+                .finally(function() {
+                    btn.disabled = false;
+                    btn.textContent = originalText;
+                });
+        });
+        
+        // Bouton Chercher infos EAN
+        document.getElementById('btn-search-ean').addEventListener('click', function () {
+            const ean = document.getElementById('ean').value.trim();
+            if (!ean) {
+                showMessage('❌ Sélectionnez un code-barre d\'abord', 'error');
+                return;
+            }
+
+            var btn = this;
+            btn.disabled = true;
+            var originalText = btn.textContent;
+            btn.textContent = '🔍 Recherche…';
+
+            fetch('api.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+                body: new URLSearchParams({ action: 'searchEAN', ean: ean })
+            })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success && data.data) {
+                        populateForm(data.data);
+                        showMessage('✅ Infos trouvées et remplies!', 'success');
+                    } else {
+                        showMessage('⚠️ Aucune info trouvée pour ce code', 'info');
+                    }
+                })
+                .catch(err => showMessage('❌ Erreur: ' + err.message, 'error'))
+                .finally(() => {
+                    btn.disabled = false;
+                    btn.textContent = originalText;
+                });
+        });
+        
+        // Remplir le formulaire avec les données EAN
+        function populateForm(data) {
+            if (data.name) document.getElementById('titre').value = data.name;
+            if (data.description) document.getElementById('notes').value = data.description;
+            if (data.brand) document.getElementById('auteur').value = data.brand;
+            // Les champs année, résolution, son doivent être remplis manuellement
+        }
+        
         function showMessage(text, type) {
             messageDiv.className = 'message ' + type;
             messageDiv.textContent = text;
-            setTimeout(() => messageDiv.textContent = '', 3000);
+            setTimeout(() => messageDiv.textContent = '', 4000);
         }
         
         function loadPending() {
@@ -183,12 +268,14 @@
         function selectItem(ean) {
             document.getElementById('ean').value = ean;
             document.getElementById('eanDisplay').value = ean;
+            document.getElementById('btn-search-ean').disabled = false;
             document.getElementById('titre').focus();
         }
         
         function resetForm() {
             form.reset();
             document.getElementById('eanDisplay').value = '';
+            document.getElementById('btn-search-ean').disabled = true;
         }
         
         loadPending();
