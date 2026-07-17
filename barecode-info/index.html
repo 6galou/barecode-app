@@ -14,6 +14,7 @@
         .form-group { margin-bottom: 15px; }
         label { display: block; margin-bottom: 5px; color: #555; font-weight: bold; font-size: 12px; }
         input, select, textarea { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; }
+        input[readonly] { background: #f0f0f0; }
         button { background: #4CAF50; color: white; padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; margin-right: 10px; margin-top: 10px; }
         button:hover { background: #45a049; }
         button:disabled { background: #ccc; cursor: not-allowed; }
@@ -27,6 +28,10 @@
         .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
         .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
         .loading { background: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .form-row.full { grid-template-columns: 1fr; }
+        .form-section { margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee; }
+        .form-section h3 { color: #666; font-size: 13px; margin-bottom: 10px; text-transform: uppercase; }
     </style>
 </head>
 <body>
@@ -48,6 +53,7 @@
                 <form id="laserForm">
                     <input type="hidden" id="ean">
                     
+                    <!-- Infos de base -->
                     <div class="form-group">
                         <label>EAN</label>
                         <input type="text" id="eanDisplay" readonly>
@@ -58,74 +64,93 @@
                         <input type="text" id="titre" required>
                     </div>
                     
-                    <div class="form-group">
-                        <label>Auteur/Réalisateur</label>
-                        <input type="text" id="auteur">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Auteur/Réalisateur</label>
+                            <input type="text" id="auteur">
+                        </div>
+                        <div class="form-group">
+                            <label>Année</label>
+                            <input type="number" id="annee">
+                        </div>
                     </div>
                     
-                    <div class="form-group">
-                        <label>Année</label>
-                        <input type="number" id="annee">
+                    <!-- Spécifications Laserdisc -->
+                    <div class="form-section">
+                        <h3>Spécifications Laserdisc</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Résolution</label>
+                                <select id="resolution">
+                                    <option value="">-- Sélectionner --</option>
+                                    <option value="480i">480i</option>
+                                    <option value="720p">720p</option>
+                                    <option value="1080i">1080i</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Son</label>
+                                <select id="son">
+                                    <option value="">-- Sélectionner --</option>
+                                    <option value="Mono">Mono</option>
+                                    <option value="Stéréo">Stéréo</option>
+                                    <option value="Dolby">Dolby</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Édition</label>
+                                <input type="text" id="edition" placeholder="Criterion, Arrow...">
+                            </div>
+                            <div class="form-group">
+                                <label>État</label>
+                                <select id="etat">
+                                    <option value="">-- Sélectionner --</option>
+                                    <option value="Neuf">Neuf</option>
+                                    <option value="Bon">Bon</option>
+                                    <option value="Usé">Usé</option>
+                                </select>
+                            </div>
+                        </div>
                     </div>
                     
-                    <div class="form-group">
-                        <label>Résolution</label>
-                        <select id="resolution">
-                            <option value="">-- Sélectionner --</option>
-                            <option value="480i">480i</option>
-                            <option value="720p">720p</option>
-                            <option value="1080i">1080i</option>
-                        </select>
+                    <!-- Infos produit depuis API -->
+                    <div class="form-section">
+                        <h3>Infos Produit (API)</h3>
+                        <div class="form-group">
+                            <label>Catégorie</label>
+                            <input type="text" id="categorie" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label>Fabricant</label>
+                            <input type="text" id="fabricant" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label>Image URL</label>
+                            <input type="text" id="image" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label>Source API</label>
+                            <input type="text" id="source" readonly>
+                        </div>
                     </div>
                     
-                    <div class="form-group">
-                        <label>Son</label>
-                        <select id="son">
-                            <option value="">-- Sélectionner --</option>
-                            <option value="Mono">Mono</option>
-                            <option value="Stéréo">Stéréo</option>
-                            <option value="Dolby">Dolby</option>
-                        </select>
+                    <!-- Notes -->
+                    <div class="form-section">
+                        <h3>Notes</h3>
+                        <div class="form-group">
+                            <label>Notes personnelles</label>
+                            <textarea id="notes" rows="2"></textarea>
+                        </div>
                     </div>
                     
-                    <div class="form-group">
-                        <label>Édition</label>
-                        <input type="text" id="edition" placeholder="Criterion, Arrow...">
+                    <!-- Boutons -->
+                    <div style="margin-top: 20px; border-top: 1px solid #eee; padding-top: 20px;">
+                        <button type="submit">💾 Sauvegarder</button>
+                        <button type="button" class="secondary" onclick="resetForm()">🔄 Réinitialiser</button>
+                        <button id="btn-search-ean" type="button" class="secondary" disabled>🔍 Chercher infos EAN</button>
                     </div>
-                    
-                    <div class="form-group">
-                        <label>État</label>
-                        <select id="etat">
-                            <option value="">-- Sélectionner --</option>
-                            <option value="Neuf">Neuf</option>
-                            <option value="Bon">Bon</option>
-                            <option value="Usé">Usé</option>
-                        </select>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Notes personnelles</label>
-                        <textarea id="notes" rows="2"></textarea>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Champ Libre 1</label>
-                        <input type="text" id="ext1">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Champ Libre 2</label>
-                        <input type="text" id="ext2">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Champ Libre 3</label>
-                        <input type="text" id="ext3">
-                    </div>
-                    
-                    <button type="submit">💾 Sauvegarder</button>
-                    <button type="button" class="secondary" onclick="resetForm()">🔄 Réinitialiser</button>
-                    <button id="btn-search-ean" type="button" class="secondary" disabled>🔍 Chercher infos EAN</button>
                 </form>
             </div>
         </div>
@@ -234,7 +259,11 @@
             if (data.name) document.getElementById('titre').value = data.name;
             if (data.description) document.getElementById('notes').value = data.description;
             if (data.brand) document.getElementById('auteur').value = data.brand;
-            // Les champs année, résolution, son doivent être remplis manuellement
+            if (data.category) document.getElementById('categorie').value = data.category;
+            if (data.manufacturer) document.getElementById('fabricant').value = data.manufacturer;
+            if (data.image) document.getElementById('image').value = data.image;
+            if (data.year) document.getElementById('annee').value = data.year;
+            if (data.source) document.getElementById('source').value = data.source;
         }
         
         function showMessage(text, type) {
